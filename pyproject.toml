@@ -41,3 +41,9 @@ dev = [
     "flake8 (>=7.3.0,<8.0.0)",
     "mypy (>=2.1.0,<3.0.0)"
 ]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings"
+python_files = ["tests.py", "test_*.py", "*_tests.py"]
+addopts = "-v --tb=short --strict-markers"
+pythonpath = ["src","."]

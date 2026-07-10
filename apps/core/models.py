@@ -1,5 +1,4 @@
 from django.db import models
-from django.contrib.auth.models import User
 from django.conf import settings
 from apps.core.domain.mixins import TimestampMixin, SoftDeleteMixin
 
@@ -8,7 +7,7 @@ class AuditLog(TimestampMixin, SoftDeleteMixin, models.Model):
     Журнал событий
     """
     user = models.ForeignKey(
-        User,
+        settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
