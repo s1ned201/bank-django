@@ -4,7 +4,7 @@ from apps.accounts.models import User, TwoFACode
 from apps.core.domain.exceptions import ConflictError, ValidationError
 from datetime import timedelta
 from django.utils import timezone
-from apps.accounts.infrastructure.tasks import send_2fa_code
+from apps.telegram_bot.tasks import send_2fa_code
 
 
 class RegistrationService:
@@ -44,13 +44,8 @@ class TwoFAService:
             expires_at=expires_at,
         )
 
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.info(f"[2FA] Код {code} для пользователя {user.username} (Telegram ID: {user.telegram_id})")
-
+        send_2fa_code.delay(user.id, user.telegram_id, code)
         return code
-        # send_2fa_code.delay(user.id, user.telegram_id, code)
-        # return code
 
     def verify_code(self, user, code, ip_address=None):
         try:

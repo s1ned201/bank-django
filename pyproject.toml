@@ -16,14 +16,14 @@ dependencies = [
     "python-telegram-bot (>=22.8,<23.0)",
     "requests (>=2.34.2,<3.0.0)",
     "celery (>=5.6.3,<6.0.0)",
-    "redis (>=8.0.1,<9.0.0)",
     "drf-spectacular (>=0.30.0,<0.31.0)",
     "gunicorn (>=26.0.0,<27.0.0)",
     "python-dotenv (>=1.2.2,<2.0.0)",
     "pillow (>=12.3.0,<13.0.0)",
     "django-redis (>=7.0.0,<8.0.0)",
     "pydantic (>=2.13.4,<3.0.0)",
-    "django-extensions (>=4.1,<5.0)"
+    "django-extensions (>=4.1,<5.0)",
+    "redis (>=4.6.0,<5.0.0)"
 ]
 
 
