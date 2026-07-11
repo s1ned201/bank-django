@@ -1,5 +1,10 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+import random
+from datetime import timedelta
+from django.utils import timezone
+
+from django.conf import settings
 
 
 class User(AbstractUser):
@@ -67,3 +72,52 @@ class User(AbstractUser):
 
     def __str__(self):
         return self.get_full_name() or self.username
+
+class TwoFACode(models.Model):
+
+    code = models.CharField(
+        max_length=6,
+        verbose_name="Код"
+    )
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="twofa_codes",
+        verbose_name="Пользователь"
+    )
+
+    expires_at = models.DateTimeField(
+        verbose_name="Срок действия",
+    )
+
+    is_used = models.BooleanField(
+        verbose_name="Использован",
+        default=False,
+    )
+
+    ip_address = models.GenericIPAddressField(
+        verbose_name="IP-адрес",
+        null=True,
+        blank=True,
+    )
+
+    created_at = models.DateTimeField(
+        verbose_name="Дата создания",
+        auto_now_add=True,
+    )
+
+    class Meta:
+        verbose_name = "Код 2FA"
+        verbose_name_plural = "Коды 2FA"
+
+    def __str__(self):
+        return f"{self.user.username} - {self.code}"
+
+    @staticmethod
+    def generate_code():
+        """Генерация рандомного 6 значного кода"""
+        return str(random.randint(100000, 999999))
+
+    def is_expired(self):
+        return timezone.now() > self.expires_at
