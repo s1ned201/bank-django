@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 from datetime import timedelta
 from dotenv import load_dotenv
+from celery.schedules import crontab
 
 load_dotenv()
 
@@ -172,3 +173,14 @@ CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'UTC'
+
+
+CELERY_BEAT_SCHEDULE = {
+    'update-rates-daily': {
+        'task': 'apps.rates.infrastructure.tasks.update_exchange_rates',
+        'schedule': crontab(hour=10, minute=0),
+    },
+}
+
+# CURRENCY FILTER
+ALLOWED_CURRENCY_CODES = ['USD', 'EUR', 'RUB', 'GBP', 'CNY', 'PLN']
