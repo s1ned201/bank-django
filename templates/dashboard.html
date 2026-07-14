@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+{% block title %}Личный кабинет{% endblock %}
+{% block content %}
+<h2 class="mb-4">Личный кабинет</h2>
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                Мои счета
+            </div>
+            <div class="card-body" id="accounts-list">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Загрузка...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                Последние транзакции
+            </div>
+            <div class="card-body" id="transactions-list">
+                <p>Выберите счёт для просмотра операций.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+    async function loadAccounts() {
+        const data = await apiRequest('/api/v1/dashboard/');
+        if (data && data.accounts) {
+            const container = document.getElementById('accounts-list');
+            container.innerHTML = '';
+            if (data.accounts.length === 0) {
+                container.innerHTML = '<p>У вас пока нет счетов.</p>';
+                return;
+            }
+            data.accounts.forEach(acc => {
+                const div = document.createElement('div');
+                div.className = 'd-flex justify-content-between align-items-center mb-2 p-2 border rounded';
+                div.innerHTML = `
+                    <div>
+                        <strong>${acc.name}</strong> (${acc.currency})
+                    </div>
+                    <div class="fs-5">${acc.balance}</div>
+                `;
+                div.style.cursor = 'pointer';
+                div.addEventListener('click', () => loadTransactions(acc.id, acc.name));
+                container.appendChild(div);
+            });
+        }
+    }
+
+    async function loadTransactions(accountId, accountName) {
+        const container = document.getElementById('transactions-list');
+        container.innerHTML = '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Загрузка...</span></div>';
+        const data = await apiRequest(`/api/v1/dashboard/transactions/?account_id=${accountId}&limit=20`);
+        if (data) {
+            container.innerHTML = `<h5>Операции по счёту: ${accountName}</h5>`;
+            if (data.length === 0) {
+                container.innerHTML += '<p>Нет операций.</p>';
+                return;
+            }
+            const table = document.createElement('table');
+            table.className = 'table table-sm';
+            table.innerHTML = `
+                <thead>
+                    <tr>
+                        <th>Дата</th>
+                        <th>Тип</th>
+                        <th>Сумма</th>
+                        <th>Описание</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${data.map(tx => `
+                        <tr>
+                            <td>${new Date(tx.date).toLocaleString()}</td>
+                            <td>${tx.type}</td>
+                            <td>${tx.amount}</td>
+                            <td>${tx.description || ''}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            `;
+            container.appendChild(table);
+        }
+    }
+
+    loadAccounts();
+</script>
+{% endblock %}

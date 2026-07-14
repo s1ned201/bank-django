@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+{% block title %}Курсы валют{% endblock %}
+{% block content %}
+<h2 class="mb-4">Курсы валют НБ РБ</h2>
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Валюта</th>
+            <th>Курс (BYN)</th>
+            <th>Динамика за 7 дней</th>
+        </tr>
+    </thead>
+    <tbody id="rates-body">
+        <tr><td colspan="3" class="text-center">Загрузка...</td></tr>
+    </tbody>
+</table>
+{% endblock %}
+{% block extra_js %}
+<script>
+    async function loadRates() {
+        const data = await apiRequest('/api/v1/rates/');
+        const tbody = document.getElementById('rates-body');
+        tbody.innerHTML = '';
+        if (!data) return;
+        const currencies = Object.keys(data);
+        for (const code of currencies) {
+            const rateData = data[code];
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${rateData.name} (${code})</td>
+                <td>${rateData.rate}</td>
+                <td><canvas id="spark-${code}" width="100" height="20" style="display:inline-block;"></canvas></td>
+            `;
+            tbody.appendChild(row);
+            loadSparkline(code, `spark-${code}`);
+        }
+    }
+
+    async function loadSparkline(currencyCode, canvasId) {
+        try {
+            const history = await apiRequest(`/api/v1/rates/history/${currencyCode}/?days=7`);
+            if (history && history.length > 0) {
+                drawSparkline(canvasId, history.map(h => parseFloat(h.rate)));
+            }
+        } catch(e) {}
+    }
+
+    function drawSparkline(canvasId, values) {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        const w = canvas.width, h = canvas.height;
+        ctx.clearRect(0, 0, w, h);
+        if (values.length < 2) return;
+        const min = Math.min(...values);
+        const max = Math.max(...values);
+        const range = max - min || 1;
+        const xStep = w / (values.length - 1);
+        ctx.beginPath();
+        ctx.strokeStyle = '#0d6efd';
+        ctx.lineWidth = 1.5;
+        values.forEach((val, i) => {
+            const x = i * xStep;
+            const y = h - ((val - min) / range) * (h - 2) - 1;
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+    }
+
+    loadRates();
+</script>
+{% endblock %}

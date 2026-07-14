@@ -1,0 +1,88 @@
+{% extends 'base.html' %}
+{% block title %}Вход в систему{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <h2 class="mb-4">Вход в систему</h2>
+        <div id="error-message" class="alert alert-danger d-none"></div>
+        <form id="login-form">
+            <div class="mb-3">
+                <label for="username" class="form-label">Имя пользователя</label>
+                <input type="text" class="form-control" id="username" required>
+            </div>
+            <div class="mb-3">
+                <label for="password" class="form-label">Пароль</label>
+                <input type="password" class="form-control" id="password" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Войти</button>
+        </form>
+
+        <!-- Блок 2FA -->
+        <div id="2fa-block" class="mt-4 d-none">
+            <h4>Подтверждение входа</h4>
+            <p>Введите код, отправленный в Telegram:</p>
+            <div class="mb-3">
+                <input type="text" class="form-control" id="2fa-code" placeholder="6-значный код" maxlength="6">
+            </div>
+            <button id="verify-2fa-btn" class="btn btn-success">Подтвердить</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+    let tempToken = null;
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+        try {
+            const response = await fetch('/api/v1/auth/token/', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({username, password})
+            });
+            const data = await response.json();
+            if (data.status === '2fa_required') {
+                tempToken = data.temp_token;
+                document.getElementById('login-form').classList.add('d-none');
+                document.getElementById('2fa-block').classList.remove('d-none');
+            } else if (data.access && data.refresh) {
+                saveTokens(data.access, data.refresh);
+                window.location.href = '/dashboard/';
+            } else {
+                showError(data.detail || 'Неверные учетные данные');
+            }
+        } catch (err) {
+            showError('Ошибка сети');
+        }
+    });
+
+    document.getElementById('verify-2fa-btn').addEventListener('click', async () => {
+        const code = document.getElementById('2fa-code').value;
+        if (!code) return;
+        try {
+            const response = await fetch('/api/v1/auth/verify-2fa/', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({temp_token: tempToken, code})
+            });
+            const data = await response.json();
+            if (data.access && data.refresh) {
+                saveTokens(data.access, data.refresh);
+                window.location.href = '/dashboard/';
+            } else {
+                showError(data.error || 'Неверный код');
+            }
+        } catch (err) {
+            showError('Ошибка сети');
+        }
+    });
+
+    function showError(msg) {
+        const errDiv = document.getElementById('error-message');
+        errDiv.textContent = msg;
+        errDiv.classList.remove('d-none');
+    }
+</script>
+{% endblock %}
