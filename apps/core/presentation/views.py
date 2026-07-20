@@ -5,9 +5,18 @@ from datetime import datetime
 from django.db import connections
 from django_redis import get_redis_connection
 from celery import current_app
+from drf_spectacular.utils import extend_schema, OpenApiResponse
+from drf_spectacular.types import OpenApiTypes
 
 class HealthCheckView(APIView):
     permission_classes = [AllowAny]
+
+    @extend_schema(
+        responses={
+            200: OpenApiResponse(response=OpenApiTypes.OBJECT, description="Статус сервера и сервисов"),
+        },
+        description="Проверка работоспособности БД, Redis, Celery",
+    )
 
     def get(self,request, *args, **kwargs):
         health_data = {

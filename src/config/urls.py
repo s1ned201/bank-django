@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.urls import path, include
 from django.views.generic import TemplateView
+from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -9,6 +10,10 @@ urlpatterns = [
     path('api/v1/rates/', include('apps.rates.urls')),
     path('api/v1/dashboard/', include('apps.dashboard.urls')),
     path('api/v1/assistant/', include('apps.assistant.urls')),
+    # SPECTACULAR
+    path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
+    path('api/docs/swagger/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
+    path('api/docs/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
     # HTML pages
     path('login/', TemplateView.as_view(template_name='login.html'), name='login'),
     path('dashboard/', TemplateView.as_view(template_name='dashboard.html'), name='dashboard'),

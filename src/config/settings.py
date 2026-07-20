@@ -147,7 +147,7 @@ SIMPLE_JWT = {
 # SWAGGER
 SPECTACULAR_SETTINGS = {
     'TITLE': 'Banking API',
-    'DESCRIPTION': 'BANKING API',
+    'DESCRIPTION': 'API банковского веб-сайта с виртуальным помощником и 2FA',
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
 }

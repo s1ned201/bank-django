@@ -8,12 +8,23 @@ from apps.accounts.presentation.serializers import RegistrationSerializer, Verif
 from apps.accounts.domain.services import RegistrationService, TwoFAService
 from apps.accounts.infrastructure.repositories import UserRepository
 from apps.core.domain.exceptions import ValidationError
+from drf_spectacular.utils import extend_schema, OpenApiResponse
+from drf_spectacular.types import OpenApiTypes
+from .serializers import RegistrationSerializer, Verify2FASerializer, CustomTokenObtainPairSerializer
 
-from .serializers import CustomTokenObtainPairSerializer
 
 class RegistrationView(APIView):
 
     permission_classes = []
+
+    @extend_schema(
+        request=RegistrationSerializer,
+        responses={
+            201: OpenApiResponse(response=OpenApiTypes.OBJECT, description='Пользователь создан'),
+            400: OpenApiResponse(description="Ошибка валидации")
+        },
+        description="Регистрация нового клиента",
+    )
 
     def post(self, request):
         serializer = RegistrationSerializer(data=request.data)
@@ -32,6 +43,15 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 
 class Verify2FAView(APIView):
     permission_classes = [AllowAny]
+
+    @extend_schema(
+        request=Verify2FASerializer,
+        responses={
+            200: OpenApiResponse(response=OpenApiTypes.OBJECT, description="JWT токены"),
+            400: OpenApiResponse(description="Ошибка проверки кода"),
+        },
+        description="Подтверждение 2FA-кода и получение access/refresh токенов",
+    )
 
     def post(self, request):
         serializer = Verify2FASerializer(data=request.data)
