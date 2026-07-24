@@ -55,3 +55,17 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 class Verify2FASerializer(serializers.Serializer):
     temp_token = serializers.CharField()
     code = serializers.CharField(min_length=6, max_length=6)
+
+class TelegramBindSerializer(serializers.Serializer):
+    telegram_id = serializers.IntegerField()
+
+class TelegramVerifySerializer(serializers.Serializer):
+    telegram_id = serializers.IntegerField()
+    code = serializers.CharField(min_length=6, max_length=6)
+
+class UserProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['username', 'email', 'first_name', 'last_name', 'phone_number',
+                  'telegram_id', 'is_telegram_verified', 'telegram_avatar_url']
+        read_only_fields = ['username', 'email', 'telegram_id', 'is_telegram_verified', 'telegram_avatar_url']

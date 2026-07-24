@@ -1,0 +1,112 @@
+{% extends 'base.html' %}
+{% block title %}Профиль{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <h2 class="mb-4">Мой профиль</h2>
+        <div id="profile-message" class="alert d-none"></div>
+
+        <!-- Аватарка -->
+        <div class="text-center mb-4">
+            <img id="avatar-img" src="" alt="Аватар" class="rounded-circle" width="120" height="120" style="object-fit: cover;">
+            <p id="no-avatar" class="text-muted d-none">Аватар не загружен</p>
+        </div>
+
+        <form id="profile-form">
+            <div class="mb-3">
+                <label class="form-label">Имя пользователя</label>
+                <input type="text" class="form-control" id="username" disabled>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Email</label>
+                <input type="email" class="form-control" id="email" disabled>
+            </div>
+            <div class="mb-3">
+                <label for="first_name" class="form-label">Имя</label>
+                <input type="text" class="form-control" id="first_name">
+            </div>
+            <div class="mb-3">
+                <label for="last_name" class="form-label">Фамилия</label>
+                <input type="text" class="form-control" id="last_name">
+            </div>
+            <div class="mb-3">
+                <label for="phone_number" class="form-label">Телефон</label>
+                <input type="text" class="form-control" id="phone_number">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Telegram</label>
+                <div id="telegram-info">
+                    <span id="telegram-status" class="badge bg-secondary">Не привязан</span>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary">Сохранить изменения</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+    async function loadProfile() {
+        try {
+            const data = await apiRequest('/api/v1/auth/profile/');
+            document.getElementById('username').value = data.username;
+            document.getElementById('email').value = data.email;
+            document.getElementById('first_name').value = data.first_name || '';
+            document.getElementById('last_name').value = data.last_name || '';
+            document.getElementById('phone_number').value = data.phone_number || '';
+
+            // Аватарка
+            const avatarImg = document.getElementById('avatar-img');
+            const noAvatar = document.getElementById('no-avatar');
+            if (data.telegram_avatar_url) {
+                avatarImg.src = data.telegram_avatar_url;
+                avatarImg.classList.remove('d-none');
+                noAvatar.classList.add('d-none');
+            } else {
+                avatarImg.classList.add('d-none');
+                noAvatar.classList.remove('d-none');
+            }
+
+            // Статус Telegram
+            const statusEl = document.getElementById('telegram-status');
+            if (data.is_telegram_verified) {
+                statusEl.textContent = 'Привязан';
+                statusEl.className = 'badge bg-success';
+            } else {
+                statusEl.textContent = 'Не привязан';
+                statusEl.className = 'badge bg-secondary';
+            }
+        } catch(e) {
+            showMessage('Ошибка загрузки профиля', 'danger');
+        }
+    }
+
+    document.getElementById('profile-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const data = {
+            first_name: document.getElementById('first_name').value,
+            last_name: document.getElementById('last_name').value,
+            phone_number: document.getElementById('phone_number').value
+        };
+        try {
+            await apiRequest('/api/v1/auth/profile/', {
+                method: 'PATCH',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            });
+            showMessage('Профиль обновлён', 'success');
+        } catch(e) {
+            showMessage('Ошибка: ' + (e.message || ''), 'danger');
+        }
+    });
+
+    function showMessage(text, type) {
+        const msg = document.getElementById('profile-message');
+        msg.textContent = text;
+        msg.className = `alert alert-${type}`;
+        msg.classList.remove('d-none');
+    }
+
+    loadProfile();
+</script>
+{% endblock %}

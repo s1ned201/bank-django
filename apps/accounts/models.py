@@ -45,6 +45,11 @@ class User(AbstractUser):
         null=True,
         blank=True,
     )
+    telegram_avatar_url = models.URLField(
+        verbose_name="URL аватарки Telegram",
+        blank=True,
+        null=True,
+    )
     is_manager = models.BooleanField(
         verbose_name="Менеджер",
         default=False,

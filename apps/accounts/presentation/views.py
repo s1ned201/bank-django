@@ -1,16 +1,22 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.tokens import RefreshToken, AccessToken
-from apps.accounts.presentation.serializers import RegistrationSerializer, Verify2FASerializer
 from apps.accounts.domain.services import RegistrationService, TwoFAService
 from apps.accounts.infrastructure.repositories import UserRepository
 from apps.core.domain.exceptions import ValidationError
 from drf_spectacular.utils import extend_schema, OpenApiResponse
 from drf_spectacular.types import OpenApiTypes
-from .serializers import RegistrationSerializer, Verify2FASerializer, CustomTokenObtainPairSerializer
+from .serializers import (
+    RegistrationSerializer,
+    Verify2FASerializer,
+    CustomTokenObtainPairSerializer,
+    TelegramBindSerializer,
+    TelegramVerifySerializer,
+    UserProfileSerializer
+)
 
 
 class RegistrationView(APIView):
@@ -77,3 +83,38 @@ class Verify2FAView(APIView):
             'refresh': str(refresh),
             'access': str(refresh.access_token),
         })
+
+class TelegramBindView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = TelegramBindSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        telegram_id = serializer.validated_data['telegram_id']
+        service = TwoFAService(UserRepository())
+        service.send_telegram_bind_code(request.user, telegram_id)
+        return Response({'status': 'code_sent'})
+
+class TelegramVerifyView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = TelegramVerifySerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        service = TwoFAService(UserRepository())
+        service.verify_telegram_bind_code(request.user, data['code'], data['telegram_id'])
+        return Response({'status': 'telegram_verified'})
+
+class ProfileView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        serializer = UserProfileSerializer(request.user)
+        return Response(serializer.data)
+
+    def patch(self, request):
+        serializer = UserProfileSerializer(request.user, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)

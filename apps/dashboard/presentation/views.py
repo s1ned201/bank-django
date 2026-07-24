@@ -4,6 +4,9 @@ from rest_framework.permissions import IsAuthenticated
 from apps.dashboard.domain.services import DashboardService
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse
 from drf_spectacular.types import OpenApiTypes
+from apps.dashboard.models import Account, Transaction
+from apps.rates.models import Currency
+from apps.core.domain.exceptions import ValidationError
 
 class DashboardView(APIView):
     permission_classes = [IsAuthenticated]
@@ -44,3 +47,82 @@ class TransactionHistoryView(APIView):
         limit = int(request.query_params.get('limit', 20))
         service = DashboardService()
         return Response(service.get_transactions(request.user, account_id, limit))
+
+class CreateAccountView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        name = request.data.get('name', 'Основной')
+        currency_code = request.data.get('currency')
+        if not currency_code:
+            return Response({'error': 'Валюта обязательна'}, status=400)
+        try:
+            currency = Currency.objects.get(code=currency_code.upper())
+        except Currency.DoesNotExist:
+            return Response({'error': f'Валюта {currency_code} не найдена'}, status=404)
+        account = Account.objects.create(user=request.user, currency=currency, name=name)
+        return Response({
+            'id': account.id,
+            'name': account.name,
+            'currency': account.currency.code,
+            'balance': str(account.balance)
+        }, status=201)
+
+class CreateTransferView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        from_account_id = request.data.get('from_account')
+        to_account_id = request.data.get('to_account')
+        amount = request.data.get('amount')
+        description = request.data.get('description', '')
+
+        if not from_account_id or not to_account_id or not amount:
+            raise ValidationError("from_account, to_account и amount обязательны")
+
+        try:
+            amount = float(amount)
+        except ValueError:
+            raise ValidationError("Неверная сумма")
+
+        if amount <= 0:
+            raise ValidationError("Сумма должна быть положительной")
+
+        try:
+            from_account = Account.objects.get(pk=from_account_id, user=request.user)
+        except Account.DoesNotExist:
+            raise ValidationError("Счет отправителя не найден или не принадлежит вам")
+
+        try:
+            to_account = Account.objects.get(pk=to_account_id, user=request.user)
+        except Account.DoesNotExist:
+            raise ValidationError("Счет получателя не найден или не принадлежит вам")
+
+        if from_account == to_account:
+            raise ValidationError("Нельзя перевести на тот же счет")
+
+        if from_account.balance < amount:
+            raise ValidationError("Недостаточно средств")
+
+        from_account.balance -= amount
+        to_account.balance += amount
+        from_account.save()
+        to_account.save()
+
+        transaction = Transaction.objects.create(
+            from_account=from_account,
+            to_account=to_account,
+            amount=amount,
+            transaction_type='transfer',
+            description=description
+        )
+
+        return Response({
+            'id': transaction.id,
+            'type': transaction.transaction_type,
+            'amount': str(transaction.amount),
+            'from_account': transaction.from_account_id,
+            'to_account': transaction.to_account_id,
+            'description': transaction.description,
+            'date': transaction.created_at.isoformat(),
+        }, status=201)

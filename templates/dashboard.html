@@ -3,11 +3,19 @@
 
 {% block content %}
 <h2 class="mb-4">Личный кабинет</h2>
+<div class="mb-3">
+    <button class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#telegramModal">
+        Привязать Telegram
+    </button>
+</div>
 <div class="row">
+    <!-- Колонка счетов -->
     <div class="col-md-6">
         <div class="card">
-            <div class="card-header">
-                Мои счета
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>Мои счета</span>
+                <button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#createAccountModal">+ Создать счёт</button>
+                <button class="btn btn-outline-success btn-sm ms-2" data-bs-toggle="modal" data-bs-target="#transferModal">Перевести</button>
             </div>
             <div class="card-body" id="accounts-list">
                 <div class="spinner-border text-primary" role="status">
@@ -16,6 +24,8 @@
             </div>
         </div>
     </div>
+
+    <!-- Колонка транзакций -->
     <div class="col-md-6">
         <div class="card">
             <div class="card-header">
@@ -27,6 +37,94 @@
         </div>
     </div>
 </div>
+
+<!-- Модальное окно создания счёта -->
+<div class="modal fade" id="createAccountModal" tabindex="-1" aria-labelledby="createAccountModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="createAccountModalLabel">Новый счёт</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label for="accountName" class="form-label">Название</label>
+          <input type="text" class="form-control" id="accountName" value="Основной">
+        </div>
+        <div class="mb-3">
+          <label for="currencySelect" class="form-label">Валюта</label>
+          <select class="form-select" id="currencySelect">
+            <option value="USD">USD</option>
+            <option value="EUR">EUR</option>
+            <option value="RUB">RUB</option>
+            <option value="GBP">GBP</option>
+            <option value="CNY">CNY</option>
+            <option value="PLN">PLN</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+        <button type="button" class="btn btn-primary" id="createAccountBtn">Создать</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal fade" id="telegramModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Привязка Telegram</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="telegram-step1">
+        <p>Введите ваш Telegram ID (узнайте его у бота <a href="https://t.me/userinfobot" target="_blank">@userinfobot</a>).</p>
+        <input type="number" class="form-control" id="telegram-id-input" placeholder="123456789">
+        <button class="btn btn-primary mt-3" id="send-telegram-code">Отправить код</button>
+      </div>
+      <div class="modal-body d-none" id="telegram-step2">
+        <p>Введите 6-значный код, отправленный вам в Telegram.</p>
+        <input type="text" class="form-control" id="telegram-code-input" placeholder="Код">
+        <button class="btn btn-success mt-3" id="verify-telegram-code">Подтвердить</button>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Модальное окно перевода -->
+<div class="modal fade" id="transferModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Перевод между счетами</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label for="fromAccount" class="form-label">Со счета</label>
+          <select class="form-select" id="fromAccount"></select>
+        </div>
+        <div class="mb-3">
+          <label for="toAccount" class="form-label">На счет</label>
+          <select class="form-select" id="toAccount"></select>
+        </div>
+        <div class="mb-3">
+          <label for="transferAmount" class="form-label">Сумма</label>
+          <input type="number" class="form-control" id="transferAmount" step="0.01" min="0.01">
+        </div>
+        <div class="mb-3">
+          <label for="transferDescription" class="form-label">Описание (необязательно)</label>
+          <input type="text" class="form-control" id="transferDescription">
+        </div>
+        <div id="transferError" class="alert alert-danger d-none"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+        <button type="button" class="btn btn-success" id="submitTransfer">Перевести</button>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Виджет чата -->
 <style>
     .chat-widget {
         position: fixed;
@@ -93,13 +191,14 @@
 
 {% block extra_js %}
 <script>
+    // ===== Дашборд =====
     async function loadAccounts() {
         const data = await apiRequest('/api/v1/dashboard/');
         if (data && data.accounts) {
             const container = document.getElementById('accounts-list');
             container.innerHTML = '';
             if (data.accounts.length === 0) {
-                container.innerHTML = '<p>У вас пока нет счетов.</p>';
+                container.innerHTML = '<p>У вас пока нет счетов. Создайте новый счёт, нажав кнопку выше.</p>';
                 return;
             }
             data.accounts.forEach(acc => {
@@ -153,10 +252,138 @@
             container.appendChild(table);
         }
     }
+    let currentTelegramId = null;
+document.getElementById('send-telegram-code').addEventListener('click', async () => {
+    const telegramId = document.getElementById('telegram-id-input').value;
+    if (!telegramId) return alert('Введите Telegram ID');
+    try {
+        const data = await apiRequest('/api/v1/auth/telegram/bind/', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({telegram_id: telegramId})
+        });
+        if (data.status === 'code_sent') {
+            currentTelegramId = telegramId;
+            document.getElementById('telegram-step1').classList.add('d-none');
+            document.getElementById('telegram-step2').classList.remove('d-none');
+        }
+    } catch(e) {
+        alert('Ошибка: ' + (e.message || 'не удалось отправить код'));
+    }
+});
 
+document.getElementById('verify-telegram-code').addEventListener('click', async () => {
+    const code = document.getElementById('telegram-code-input').value;
+    if (!code || !currentTelegramId) return;
+    try {
+        const data = await apiRequest('/api/v1/auth/telegram/verify/', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({telegram_id: currentTelegramId, code})
+        });
+        if (data.status === 'telegram_verified') {
+            alert('Telegram успешно привязан! Теперь при входе будет запрашиваться код.');
+            bootstrap.Modal.getInstance('#telegramModal').hide();
+            // Сброс
+            document.getElementById('telegram-step2').classList.add('d-none');
+            document.getElementById('telegram-step1').classList.remove('d-none');
+        }
+    } catch(e) {
+        alert('Ошибка: ' + (e.message || 'неверный код'));
+    }
+});
     loadAccounts();
 
-    // Чат
+    // ===== Создание счёта =====
+    document.getElementById('createAccountBtn').addEventListener('click', async () => {
+        const name = document.getElementById('accountName').value || 'Основной';
+        const currency = document.getElementById('currencySelect').value;
+        try {
+            const data = await apiRequest('/api/v1/dashboard/create/', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({name, currency})
+            });
+            if (data.id) {
+                // Закрываем модальное окно и обновляем список счетов
+                const modal = bootstrap.Modal.getInstance(document.getElementById('createAccountModal'));
+                modal.hide();
+                loadAccounts();
+            } else {
+                alert(data.error || 'Ошибка создания счёта');
+            }
+        } catch(e) {
+            alert('Ошибка сети');
+        }
+    });
+
+    // Функция загрузки счетов в выпадающие списки перевода
+async function loadAccountsForTransfer() {
+    const fromSelect = document.getElementById('fromAccount');
+    const toSelect = document.getElementById('toAccount');
+    fromSelect.innerHTML = '';
+    toSelect.innerHTML = '';
+    try {
+        const data = await apiRequest('/api/v1/dashboard/');
+        if (data && data.accounts) {
+            data.accounts.forEach(acc => {
+                const option = document.createElement('option');
+                option.value = acc.id;
+                option.textContent = `${acc.name} (${acc.currency}) — ${acc.balance}`;
+                fromSelect.appendChild(option.cloneNode(true));
+                toSelect.appendChild(option);
+            });
+        }
+    } catch(e) {
+        console.error('Ошибка загрузки счетов для перевода', e);
+    }
+}
+
+// При открытии модального окна перевода загружаем счета
+document.getElementById('transferModal').addEventListener('show.bs.modal', loadAccountsForTransfer);
+
+// Отправка перевода
+document.getElementById('submitTransfer').addEventListener('click', async () => {
+    const from = document.getElementById('fromAccount').value;
+    const to = document.getElementById('toAccount').value;
+    const amount = document.getElementById('transferAmount').value;
+    const description = document.getElementById('transferDescription').value;
+
+    if (!from || !to || !amount) {
+        alert('Заполните все обязательные поля');
+        return;
+    }
+    if (from === to) {
+        alert('Выберите разные счета');
+        return;
+    }
+    try {
+        const data = await apiRequest('/api/v1/dashboard/transfer/', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                from_account: from,
+                to_account: to,
+                amount: amount,
+                description: description
+            })
+        });
+        if (data.id) {
+            bootstrap.Modal.getInstance('#transferModal').hide();
+            loadAccounts(); // обновляем балансы на дашборде
+        } else {
+            const errDiv = document.getElementById('transferError');
+            errDiv.textContent = data.error || 'Ошибка перевода';
+            errDiv.classList.remove('d-none');
+        }
+    } catch(e) {
+        const errDiv = document.getElementById('transferError');
+        errDiv.textContent = e.message || 'Ошибка сети';
+        errDiv.classList.remove('d-none');
+    }
+});
+
+    // ===== Чат =====
     const chatToggle = document.getElementById('chat-toggle');
     const chatWindow = document.getElementById('chat-window');
     const chatInput = document.getElementById('chat-input');
